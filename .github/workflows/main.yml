@@ -3,7 +3,7 @@ name: Docker Build and Push
 on:
   pull_request:
     branches:
-      - main
+      - master
   workflow_dispatch:
 
 jobs:
@@ -14,13 +14,14 @@ jobs:
 
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Extract Container Name and Version from Commit Message
         id: extract
         run: |
           echo "Parsing commit message for container and version..."
           CONTAINER=$(git log -1 --pretty=%B | grep -oP '(?<=container:)[^ ]+')
+          echo "$CONTAINER"
           VERSION=$(git log -1 --pretty=%B | grep -oP '(?<=version:)[^ ]+')
           echo "CONTAINER=${CONTAINER}" >> $GITHUB_ENV
           echo "VERSION=${VERSION}" >> $GITHUB_ENV
