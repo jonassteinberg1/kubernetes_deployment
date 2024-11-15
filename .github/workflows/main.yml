@@ -27,6 +27,7 @@ jobs:
             COMMIT_MESSAGE=$(git log -1 --pretty=%B)
             CONTAINER=$(echo "$COMMIT_MESSAGE" | grep -oE 'container:[^ ]+' | cut -d':' -f2)
             VERSION=$(echo "$COMMIT_MESSAGE" | grep -oE 'version:[^ ]+' | cut -d':' -f2)
+            echo "aws default region is: ${{ env.AWS_DEFAULT_REGION }}"
           elif [[ $GITHUB_EVENT_NAME == "pull_request" ]]; then
             # For PRs, extract PR title and body
             PR_TITLE="${{ github.event.pull_request.title }}"
