@@ -13,10 +13,11 @@ jobs:
   build-and-push:
     name: Build and Push Docker Image
     runs-on: ubuntu-latest
+    environment: dev
 
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Extract Container and Version
         id: extract
@@ -46,19 +47,27 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
 
-      - name: Authenticate with AWS ECR
-        id: login-ecr
-        uses: aws-actions/amazon-ecr-login@v1
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/admin
+          aws-region: ${{ env.AWS_DEFAULT_REGION }}
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
 
-      - name: Build, Tag, and Push Docker Image
-        env:
-          CONTAINER: ${{ env.CONTAINER }}
-          VERSION: ${{ env.VERSION }}
-        run: |
-          echo "Building Docker image for $CONTAINER:$VERSION"
-          docker buildx build -t $CONTAINER:$VERSION -f $CONTAINER.dockerfile .
-          echo "Tagging image with ECR repository URL"
-          docker tag $CONTAINER:$VERSION 379683964026.dkr.ecr.us-east-1.amazonaws.com/$CONTAINER:$VERSION
-          echo "Pushing image to AWS ECR"
-          docker push 379683964026.dkr.ecr.us-east-1.amazonaws.com/$CONTAINER:$VERSION
+      #- name: Authenticate with AWS ECR
+      #  id: login-ecr
+      #  uses: aws-actions/amazon-ecr-login@v2
+
+      #- name: Build, Tag, and Push Docker Image
+      #  env:
+      #    CONTAINER: ${{ env.CONTAINER }}
+      #    VERSION: ${{ env.VERSION }}
+      #  run: |
+      #    echo "Building Docker image for $CONTAINER:$VERSION"
+      #    docker buildx build -t $CONTAINER:$VERSION -f $CONTAINER.dockerfile .
+      #    echo "Tagging image with ECR repository URL"
+      #    docker tag $CONTAINER:$VERSION 379683964026.dkr.ecr.us-east-1.amazonaws.com/$CONTAINER:$VERSION
+      #    echo "Pushing image to AWS ECR"
+      #    docker push 379683964026.dkr.ecr.us-east-1.amazonaws.com/$CONTAINER:$VERSION
 
