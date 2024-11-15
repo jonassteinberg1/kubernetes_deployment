@@ -47,16 +47,33 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
 
-      - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ vars.AWS_DEFAULT_REGION }}
-          role-external-id: ${{ secrets.ROLE_EXTERNAL_ID }}
-          role-to-assume: admin
-          role-duration-seconds: 1200
-          role-session-name: build
+      #- name: Configure AWS Credentials
+      #  uses: aws-actions/configure-aws-credentials@v4
+      #  with:
+      #    aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      #    aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      #    aws-region: ${{ vars.AWS_DEFAULT_REGION }}
+      #    role-external-id: ${{ secrets.ROLE_EXTERNAL_ID }}
+      #    role-to-assume: admin
+      #    role-duration-seconds: 1200
+      #    role-session-name: build
+
+      - name: Install AWS CLI
+        run: |
+          curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+          unzip awscliv2.zip
+          sudo ./aws/install
+          aws --version  # Verify installation
+
+      - name: Configure AWS CLI
+        run: |
+          aws configure set aws_access_key_id ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws configure set aws_secret_access_key ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws configure set default.region ${{ vars.AWS_DEFAULT_REGION }}
+
+      - name: Test AWS CLI Command
+        run: |
+          aws sts get-caller-identity
 
       #- name: Authenticate with AWS ECR
       #  id: login-ecr
