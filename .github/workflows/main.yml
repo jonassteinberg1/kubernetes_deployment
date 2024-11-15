@@ -47,14 +47,14 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
 
-      - name: Configure AWS credentials
+      - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: admin
-          aws-region: ${{ vars.AWS_DEFAULT_REGION }}
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          #role-external-id: ${{ secrets.AWS_ROLE_EXTERNAL_ID }}
+          aws-region: ${{ vars.AWS_DEFAULT_REGION }}
+          role-external-id: ${{ secrets.ROLE_EXTERNAL_ID }}
+          role-to-assume: admin
           role-duration-seconds: 1200
           role-session-name: build
 
