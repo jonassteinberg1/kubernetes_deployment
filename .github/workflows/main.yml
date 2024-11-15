@@ -20,8 +20,9 @@ jobs:
         id: extract
         run: |
           echo "Parsing commit message for container and version..."
-          CONTAINER=$(git log -1 --pretty=%B | grep -oP '(?<=container:)[^ ]+')
-      #    echo "$CONTAINER"
+          #CONTAINER=$(git log -1 --pretty=%B | grep -oP '(?<=container:)[^ ]+')
+          CONTAINER=$(git log -1 --pretty=%B)
+          echo "$CONTAINER"
       #    VERSION=$(git log -1 --pretty=%B | grep -oP '(?<=version:)[^ ]+')
       #    echo "CONTAINER=${CONTAINER}" >> $GITHUB_ENV
       #    echo "VERSION=${VERSION}" >> $GITHUB_ENV
