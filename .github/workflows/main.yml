@@ -53,39 +53,24 @@ jobs:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ vars.AWS_DEFAULT_REGION }}
-          #role-external-id: ${{ secrets.ROLE_EXTERNAL_ID }}
           role-to-assume: admin
           role-duration-seconds: 1200
           role-session-name: build
           role-skip-session-tagging: true
 
-      - name: Test AWS CLI
+      - name: Authenticate with AWS ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build, Tag, and Push Docker Image
+        env:
+          CONTAINER: ${{ env.CONTAINER }}
+          VERSION: ${{ env.VERSION }}
         run: |
-          aws --version  # Verify installation
-
-      - name: Configure AWS CLI
-        run: |
-          aws configure set aws_access_key_id ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws configure set aws_secret_access_key ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws configure set default.region ${{ vars.AWS_DEFAULT_REGION }}
-
-      - name: Test AWS CLI Command
-        run: |
-          aws sts get-caller-identity
-
-      #- name: Authenticate with AWS ECR
-      #  id: login-ecr
-      #  uses: aws-actions/amazon-ecr-login@v2
-
-      #- name: Build, Tag, and Push Docker Image
-      #  env:
-      #    CONTAINER: ${{ env.CONTAINER }}
-      #    VERSION: ${{ env.VERSION }}
-      #  run: |
-      #    echo "Building Docker image for $CONTAINER:$VERSION"
-      #    docker buildx build -t $CONTAINER:$VERSION -f $CONTAINER.dockerfile .
-      #    echo "Tagging image with ECR repository URL"
-      #    docker tag $CONTAINER:$VERSION 379683964026.dkr.ecr.us-east-1.amazonaws.com/$CONTAINER:$VERSION
-      #    echo "Pushing image to AWS ECR"
-      #    docker push 379683964026.dkr.ecr.us-east-1.amazonaws.com/$CONTAINER:$VERSION
+          echo "Building Docker image for $CONTAINER:$VERSION"
+          docker buildx build -t $CONTAINER:$VERSION -f $CONTAINER.dockerfile .
+          echo "Tagging image with ECR repository URL"
+          docker tag $CONTAINER:$VERSION ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.us-east-1.amazonaws.com/$CONTAINER:$VERSION
+          echo "Pushing image to AWS ECR"
+          docker push ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.us-east-1.amazonaws.com/$CONTAINER:$VERSION
 
