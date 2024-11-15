@@ -20,29 +20,29 @@ jobs:
         id: extract
         run: |
           echo "Parsing commit message for container and version..."
-          CONTAINER=$(git log -1 --pretty=%B | grep -oP '(?<=container:)[^ ]+')
-          echo "$CONTAINER"
-          VERSION=$(git log -1 --pretty=%B | grep -oP '(?<=version:)[^ ]+')
-          echo "CONTAINER=${CONTAINER}" >> $GITHUB_ENV
-          echo "VERSION=${VERSION}" >> $GITHUB_ENV
-          if [ -z "$CONTAINER" ] || [ -z "$VERSION" ]; then
-            echo "Error: Commit message must include 'container:<name>' and 'version:<tag>'" >&2
-            exit 1
-          fi
+      #    CONTAINER=$(git log -1 --pretty=%B | grep -oP '(?<=container:)[^ ]+')
+      #    echo "$CONTAINER"
+      #    VERSION=$(git log -1 --pretty=%B | grep -oP '(?<=version:)[^ ]+')
+      #    echo "CONTAINER=${CONTAINER}" >> $GITHUB_ENV
+      #    echo "VERSION=${VERSION}" >> $GITHUB_ENV
+      #    if [ -z "$CONTAINER" ] || [ -z "$VERSION" ]; then
+      #      echo "Error: Commit message must include 'container:<name>' and 'version:<tag>'" >&2
+      #      exit 1
+      #    fi
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v2
+      #- name: Set up Docker Buildx
+      #  uses: docker/setup-buildx-action@v2
 
-      - name: Authenticate with AWS ECR
-        id: login-ecr
-        uses: aws-actions/amazon-ecr-login@v1
+      #- name: Authenticate with AWS ECR
+      #  id: login-ecr
+      #  uses: aws-actions/amazon-ecr-login@v1
 
-      - name: Build, Tag, and Push Docker Image
-        run: |
-          echo "Building Docker image for $CONTAINER:$VERSION"
-          docker buildx build -t $CONTAINER:$VERSION -f $CONTAINER.dockerfile .
-          echo "Tagging image with ECR repository URL"
-          docker tag $CONTAINER:$VERSION 379683964026.dkr.ecr.us-east-1.amazonaws.com/$CONTAINER:$VERSION
-          echo "Pushing image to AWS ECR"
-          docker push 379683964026.dkr.ecr.us-east-1.amazonaws.com/$CONTAINER:$VERSION
+      #- name: Build, Tag, and Push Docker Image
+      #  run: |
+      #    echo "Building Docker image for $CONTAINER:$VERSION"
+      #    docker buildx build -t $CONTAINER:$VERSION -f $CONTAINER.dockerfile .
+      #    echo "Tagging image with ECR repository URL"
+      #    docker tag $CONTAINER:$VERSION 379683964026.dkr.ecr.us-east-1.amazonaws.com/$CONTAINER:$VERSION
+      #    echo "Pushing image to AWS ECR"
+      #    docker push 379683964026.dkr.ecr.us-east-1.amazonaws.com/$CONTAINER:$VERSION
 
