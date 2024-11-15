@@ -27,7 +27,6 @@ jobs:
             COMMIT_MESSAGE=$(git log -1 --pretty=%B)
             CONTAINER=$(echo "$COMMIT_MESSAGE" | grep -oE 'container:[^ ]+' | cut -d':' -f2)
             VERSION=$(echo "$COMMIT_MESSAGE" | grep -oE 'version:[^ ]+' | cut -d':' -f2)
-            echo "aws access key is: ${{ secrets.AWS_ACCESS_KEY_ID }}"
           elif [[ $GITHUB_EVENT_NAME == "pull_request" ]]; then
             # For PRs, extract PR title and body
             PR_TITLE="${{ github.event.pull_request.title }}"
@@ -51,10 +50,13 @@ jobs:
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: arn:aws:iam::${{ vars.AWS_ACCOUNT_ID }}:role/admin
+          role-to-assume: admin
           aws-region: ${{ vars.AWS_DEFAULT_REGION }}
-          aws-access-key-id: ${{ vars.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ vars.AWS_SECRET_ACCESS_KEY }}
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          #role-external-id: ${{ secrets.AWS_ROLE_EXTERNAL_ID }}
+          role-duration-seconds: 1200
+          role-session-name: build
 
       #- name: Authenticate with AWS ECR
       #  id: login-ecr
