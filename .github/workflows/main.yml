@@ -109,7 +109,7 @@ jobs:
             if [[ $? != 0 ]]; then
               echo "minikube not found -- installing..."
               curl -LO https://storage.googleapis.com/minikube/releases/latest/minikube-linux-amd64
-              sudo install minikube-linux-amd64 /usr/local/bin/minikube && rm minikube-linux-amd64
+              sudo install minikube-linux-amd64 /usr/local/bin/minikube
             fi
 
             echo "Test minikube installation"
