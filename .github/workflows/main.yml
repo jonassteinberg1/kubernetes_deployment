@@ -164,7 +164,7 @@ jobs:
           script: |
             kubectl apply -f hello-world-ns.yml -f hello-world-pod.yml
             sleep 20
-	    IP=$(k get -n hello-world po -o wide | awk '/hello-world/ {print $6}')
+            IP=$(k get -n hello-world po -o wide | awk '/hello-world/ {print $6}')
             curl -k -X POST "http://$IP:5000/api/v1/hello" -H "Content-Type: application/json" -d '{"name": "Jonas"}'
 
             if [[ $? != 0 ]]; then
