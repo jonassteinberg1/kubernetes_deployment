@@ -142,6 +142,10 @@ jobs:
     environment: dev
     
     steps:
+      - name: ls test
+        run: |
+          ls -la
+
       - name: setup hello-world pod
         uses: appleboy/scp-action@v0.1.7
         with:
