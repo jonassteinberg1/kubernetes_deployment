@@ -3,10 +3,10 @@ name: Docker Build and Push
 on:
   pull_request:
     branches:
-      - master  # Trigger on PRs targeting the `master` branch
+      - master
   push:
     branches-ignore:
-      - master  # Trigger on pushes to all branches except `master`
+      - master
   workflow_dispatch:  # Allows manual triggering
 
 jobs:
