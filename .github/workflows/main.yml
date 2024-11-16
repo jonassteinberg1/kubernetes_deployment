@@ -90,7 +90,7 @@ jobs:
           echo "Pushing image to AWS ECR"
           docker push ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.us-east-1.amazonaws.com/$CONTAINER:$VERSION
   
-  minkube:
+  minikube:
     name: create minikube cluster
     runs-on: ubuntu-latest
     needs: build-and-push
