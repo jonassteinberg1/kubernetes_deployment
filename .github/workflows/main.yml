@@ -149,5 +149,5 @@ jobs:
           username: ${{ secrets.SSH_USERNAME }}
           key: ${{ secrets.SSH_KEY}}
           port: ${{ secrets.PORT }}
-          source: "hello-world*.yml"
+          source: "hello-world-pod.yml"
           target: /home/ec2-user
