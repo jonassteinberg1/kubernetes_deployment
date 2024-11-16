@@ -142,9 +142,8 @@ jobs:
     environment: dev
     
     steps:
-      - name: ls test
-        run: |
-          ls -la
+      - name: Checkout Code
+        uses: actions/checkout@v4
 
       - name: setup hello-world pod
         uses: appleboy/scp-action@v0.1.7
@@ -153,5 +152,5 @@ jobs:
           username: ${{ secrets.SSH_USERNAME }}
           key: ${{ secrets.SSH_KEY}}
           port: ${{ secrets.PORT }}
-          source: "hello-world-pod.yml"
+          source: "hello-world*.yml"
           target: /home/ec2-user
