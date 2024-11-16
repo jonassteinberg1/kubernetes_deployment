@@ -3,8 +3,11 @@ name: Docker Build and Push
 on:
   pull_request:
     branches:
-      - main
-  workflow_dispatch:
+      - master
+  push:
+    branches-ignore:
+      - master
+  workflow_dispatch:  # manual trigger
 
 jobs:
   build-and-push:
@@ -14,34 +17,60 @@ jobs:
 
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
-      - name: Extract Container Name and Version from Commit Message
+      - name: Extract Container and Version
         id: extract
         run: |
-          echo "Parsing commit message for container and version..."
-          CONTAINER=$(git log -1 --pretty=%B | grep -oP '(?<=container:)[^ ]+')
-          VERSION=$(git log -1 --pretty=%B | grep -oP '(?<=version:)[^ ]+')
-          echo "CONTAINER=${CONTAINER}" >> $GITHUB_ENV
-          echo "VERSION=${VERSION}" >> $GITHUB_ENV
+          if [[ $GITHUB_EVENT_NAME == "push" ]]; then
+            # For pushes, extract commit message
+            COMMIT_MESSAGE=$(git log -1 --pretty=%B)
+            CONTAINER=$(echo "$COMMIT_MESSAGE" | grep -oE 'container:[^ ]+' | cut -d':' -f2)
+            VERSION=$(echo "$COMMIT_MESSAGE" | grep -oE 'version:[^ ]+' | cut -d':' -f2)
+          elif [[ $GITHUB_EVENT_NAME == "pull_request" ]]; then
+            # For PRs, extract PR title and body
+            PR_TITLE="${{ github.event.pull_request.title }}"
+            PR_BODY="${{ github.event.pull_request.body }}"
+            CONTAINER=$(echo "$PR_TITLE $PR_BODY" | grep -oE 'container:[^ ]+' | cut -d':' -f2)
+            VERSION=$(echo "$PR_TITLE $PR_BODY" | grep -oE 'version:[^ ]+' | cut -d':' -f2)
+          fi
+
+          # Validate extracted values
           if [ -z "$CONTAINER" ] || [ -z "$VERSION" ]; then
-            echo "Error: Commit message must include 'container:<name>' and 'version:<tag>'" >&2
+            echo "Error: Missing 'container:<name>' or 'version:<tag>' in commit/PR." >&2
             exit 1
           fi
+
+          echo "CONTAINER=$CONTAINER" >> $GITHUB_ENV
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
 
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ vars.AWS_DEFAULT_REGION }}
+          role-to-assume: admin
+          role-duration-seconds: 1200
+          role-session-name: build
+          role-skip-session-tagging: true
+
       - name: Authenticate with AWS ECR
         id: login-ecr
-        uses: aws-actions/amazon-ecr-login@v1
+        uses: aws-actions/amazon-ecr-login@v2
 
       - name: Build, Tag, and Push Docker Image
+        env:
+          CONTAINER: ${{ env.CONTAINER }}
+          VERSION: ${{ env.VERSION }}
         run: |
           echo "Building Docker image for $CONTAINER:$VERSION"
-          docker buildx build -t $CONTAINER:$VERSION -f $CONTAINER.dockerfile .
+          docker buildx build -t $CONTAINER:$VERSION -f $CONTAINER.dockerfile --load .
           echo "Tagging image with ECR repository URL"
-          docker tag $CONTAINER:$VERSION 379683964026.dkr.ecr.us-east-1.amazonaws.com/$CONTAINER:$VERSION
+          docker tag $CONTAINER:$VERSION ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.us-east-1.amazonaws.com/$CONTAINER:$VERSION
           echo "Pushing image to AWS ECR"
-          docker push 379683964026.dkr.ecr.us-east-1.amazonaws.com/$CONTAINER:$VERSION
+          docker push ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.us-east-1.amazonaws.com/$CONTAINER:$VERSION
 
