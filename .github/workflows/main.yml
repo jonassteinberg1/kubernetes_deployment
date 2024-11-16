@@ -154,3 +154,21 @@ jobs:
           port: ${{ secrets.PORT }}
           source: "hello-world*.yml"
           target: /home/ec2-user
+
+      - name: deploy and test hello-world api
+        uses: appleboy/ssh-action@v1.1.0
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USERNAME }}
+          key: ${{ secrets.SSH_KEY }}
+          script: |
+            kubectl apply -f hello-world-ns.yml -f hello-world-pod.yml
+            sleep 10
+            curl -k -X POST "http://127.0.0.1:5000/api/v1/hello" -H "Content-Type: application/json" -d '{"name": "Jonas"}'
+
+            if [[ $? != 0 ]]; then
+              echo "hello-world api not working"
+              exit 127
+            fi
+            
+        
