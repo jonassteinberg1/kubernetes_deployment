@@ -120,7 +120,8 @@ jobs:
               echo "minikube installation error"
               exit 127
             else
-              minikube start --nodes=3 -p world
+              minikube start --nodes=1 -p world
+              minikube node add -p world
             fi
 
             echo "Test minikube cluster"
