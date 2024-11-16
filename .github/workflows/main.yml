@@ -67,8 +67,8 @@ jobs:
           CONTAINER: ${{ env.CONTAINER }}
           VERSION: ${{ env.VERSION }}
         run: |
-          echo "Building Docker image for $CONTAINER:$VERSION"
-          docker buildx build -t $CONTAINER:$VERSION -f $CONTAINER.dockerfile .
+	  echo "Building Docker image for $CONTAINER:$VERSION"
+          docker buildx build -t $CONTAINER:$VERSION -f $CONTAINER.dockerfile --load .
           echo "Tagging image with ECR repository URL"
           docker tag $CONTAINER:$VERSION ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.us-east-1.amazonaws.com/$CONTAINER:$VERSION
           echo "Pushing image to AWS ECR"
