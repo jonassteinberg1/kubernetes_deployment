@@ -104,32 +104,50 @@ jobs:
           username: ${{ secrets.SSH_USERNAME }}
           key: ${{ secrets.SSH_KEY }}
           script: |
-            echo "Test for minikube"
-            minikube version
-          
+            echo "Test if Minikube cluster is running"
+            minikube status -p world
+            
             if [[ $? != 0 ]]; then
-              echo "minikube not found -- installing..."
-              curl -LO https://storage.googleapis.com/minikube/releases/latest/minikube-linux-amd64
-              sudo install minikube-linux-amd64 /usr/local/bin/minikube
-            fi
-
-            echo "Test minikube installation"
-            minikube version
-          
-            if [[ $? != 0 ]]; then
-              echo "minikube installation error"
-              exit 127
-            else
-              minikube start --nodes=1 -p world
+              echo "Minikube cluster not running -- testing Minikube installation"
+              minikube version
+            
+              if [[ $? != 0 ]]; then
+                echo "Minikube not installed -- installing..."
+                curl -LO https://storage.googleapis.com/minikube/releases/latest/minikube-linux-amd64
+                sudo install minikube-linux-amd64 /usr/local/bin/minikube
+                rm minikube-linux-amd64  # Clean up installation file
+              fi
+            
+              echo "Starting Minikube cluster..."
+              minikube start --nodes=1 -p world  # Start with 1 node initially
+              echo "Adding additional nodes to Minikube cluster..."
               minikube node add -p world
-            fi
-
-            echo "Test minikube cluster"
-            kubectl get po -A
-
-            if [[ $? != 0 ]]; then
-              echo "minikube cluster error"
-              exit 127
+            
+              echo "Checking Minikube cluster status"
+              minikube status -p world
+              if [[ $? != 0 ]]; then
+                echo "Minikube cluster error"
+                exit 127
+              else
+                echo "Minikube cluster is running."
+              fi
             else
-              echo "minikube cluster is running."
+              echo "Minikube cluster is already running."
             fi
+
+  hello-world:
+    name: deploy hello-world api
+    runs-on: ubuntu-latest
+    needs: build-and-push
+    environment: dev
+    
+    steps:
+      - name: setup hello-world pod
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USERNAME }}
+          password: ${{ secrets.SSH_KEY}}
+          port: ${{ secrets.PORT }}
+          source: "hello-world*.yml"
+          target: /home/ec2-user
