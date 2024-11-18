@@ -177,7 +177,7 @@ jobs:
             sleep 20
             IP=$(kubectl get -n hello-world po -o wide | awk '/hello-world/ {print $6}')
             echo "IP: $IP"
-            nohup kubectl port-forward pod/<pod-name> 5000:5000 > port-forward.log 2>&1 &
+            nohup kubectl -n hello-world port-forward pod/hello-world 5000:5000 > port-forward.log 2>&1 &
             sleep 5
             curl -k -X POST "http://localhost:5000/api/v1/hello" -H "Content-Type: application/json" -d '{"name": "Jonas"}'
 
