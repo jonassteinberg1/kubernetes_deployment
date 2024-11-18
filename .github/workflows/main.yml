@@ -1,4 +1,4 @@
-name: Docker Build and Push
+name: Build and Test images and Setup Kubernetes Cluster
 
 on:
   pull_request:
@@ -19,35 +19,49 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Extract Container and Version
+      - name: Extract and Validate Container and Version
         id: extract
         run: |
+          # Extract commit message or PR details based on event type
           if [[ $GITHUB_EVENT_NAME == "push" ]]; then
-            # For pushes, extract commit message
             COMMIT_MESSAGE=$(git log -1 --pretty=%B)
-            CONTAINER=$(echo "$COMMIT_MESSAGE" | grep -oE 'container:[^ ]+' | cut -d':' -f2)
-            VERSION=$(echo "$COMMIT_MESSAGE" | grep -oE 'version:[^ ]+' | cut -d':' -f2)
           elif [[ $GITHUB_EVENT_NAME == "pull_request" ]]; then
-            # For PRs, extract PR title and body
             PR_TITLE="${{ github.event.pull_request.title }}"
             PR_BODY="${{ github.event.pull_request.body }}"
-            CONTAINER=$(echo "$PR_TITLE $PR_BODY" | grep -oE 'container:[^ ]+' | cut -d':' -f2)
-            VERSION=$(echo "$PR_TITLE $PR_BODY" | grep -oE 'version:[^ ]+' | cut -d':' -f2)
-          fi
-
-          # Validate extracted values
-          if [ -z "$CONTAINER" ] || [ -z "$VERSION" ]; then
-            echo "Error: Missing 'container:<name>' or 'version:<tag>' in commit/PR." >&2
+            COMMIT_MESSAGE="$PR_TITLE $PR_BODY"
+          else
+            echo "Unsupported event type: $GITHUB_EVENT_NAME"
             exit 1
           fi
 
+          # Check for required substrings
+          if ! echo "$COMMIT_MESSAGE" | grep -q "container:" || ! echo "$COMMIT_MESSAGE" | grep -q "version:"; then
+            echo "No relevant changes detected. Skipping further steps."
+            echo "run_build=false" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          # Extract container and version
+          CONTAINER=$(echo "$COMMIT_MESSAGE" | grep -oE 'container:[^ ]+' | cut -d':' -f2)
+          VERSION=$(echo "$COMMIT_MESSAGE" | grep -oE 'version:[^ ]+' | cut -d':' -f2)
+
+          # Validate extracted values
+          if [ -z "$CONTAINER" ] || [ -z "$VERSION" ]; then
+            echo "Error: Failed to extract container or version from commit/PR message." >&2
+            exit 1
+          fi
+
+          # Export variables
+          echo "run_build=true" >> $GITHUB_OUTPUT
           echo "CONTAINER=$CONTAINER" >> $GITHUB_ENV
           echo "VERSION=$VERSION" >> $GITHUB_ENV
 
       - name: Set up Docker Buildx
+        if: steps.extract.outputs.run_build == 'true'
         uses: docker/setup-buildx-action@v2
 
       - name: Configure AWS Credentials
+        if: steps.extract.outputs.run_build == 'true'
         uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
@@ -59,10 +73,12 @@ jobs:
           role-skip-session-tagging: true
 
       - name: Authenticate with AWS ECR
+        if: steps.extract.outputs.run_build == 'true'
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v2
 
       - name: Build, Tag, and Push Docker Image
+        if: steps.extract.outputs.run_build == 'true'
         env:
           CONTAINER: ${{ env.CONTAINER }}
           VERSION: ${{ env.VERSION }}
@@ -73,4 +89,99 @@ jobs:
           docker tag $CONTAINER:$VERSION ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.us-east-1.amazonaws.com/$CONTAINER:$VERSION
           echo "Pushing image to AWS ECR"
           docker push ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.us-east-1.amazonaws.com/$CONTAINER:$VERSION
+  
+  minikube:
+    name: create minikube cluster
+    runs-on: ubuntu-latest
+    needs: build-and-push
+    environment: dev
+    
+    steps:
+      - name: test for minikube and install if it does not exist
+        uses: appleboy/ssh-action@v1.1.0
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USERNAME }}
+          key: ${{ secrets.SSH_KEY }}
+          script: |
+            echo "Test if Minikube cluster is running"
+            minikube status -p world
+            
+            if [[ $? != 0 ]]; then
+              echo "Minikube cluster not running -- testing Minikube installation"
+              minikube version
+            
+              if [[ $? != 0 ]]; then
+                echo "Minikube not installed -- installing..."
+                curl -LO https://storage.googleapis.com/minikube/releases/latest/minikube-linux-amd64
+                sudo install minikube-linux-amd64 /usr/local/bin/minikube
+                rm minikube-linux-amd64  # Clean up installation file
+              fi
+            
+              echo "Creating Minikube cluster..."
+              minikube start --nodes=1 -p world  # Start with 1 node initially
+              echo "Adding additional nodes to Minikube cluster..."
+              minikube node add -p world
+            
+              echo "Checking Minikube cluster status"
+              minikube status -p world
+              if [[ $? != 0 ]]; then
+                echo "Minikube cluster error"
+                exit 127
+              else
+                echo "Minikube cluster is running."
+              fi
+            else
+              echo "Minikube cluster is already running."
+            fi
 
+  hello-world:
+    name: deploy hello-world api
+    runs-on: ubuntu-latest
+    needs: minikube
+    environment: dev
+    
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: setup hello-world pod
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USERNAME }}
+          key: ${{ secrets.SSH_KEY}}
+          port: ${{ secrets.PORT }}
+          source: "hello-world*.yml"
+          target: /home/ec2-user
+
+      - name: deploy and test hello-world api
+        uses: appleboy/ssh-action@v1.1.0
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USERNAME }}
+          key: ${{ secrets.SSH_KEY }}
+          script: |
+            echo "logging into Docker..."
+            aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.us-east-1.amazonaws.com
+            echo "installing calico to handle multi-node minikube..."
+            kubectl apply -f https://docs.projectcalico.org/manifests/calico.yaml
+            echo "creating hello-world namespace..."
+            kubectl apply -f hello-world-ns.yml
+            echo "creating aws ecr secret..."
+            kubectl create secret docker-registry aws-ecr-secret --docker-server=379683964026.dkr.ecr.us-east-1.amazonaws.com --docker-username=AWS --docker-password=$(aws ecr get-login-password) --namespace=hello-world
+            echo "sleep to give calico some time..."
+            sleep 10
+            echo "creating hello-world pod"
+            kubectl apply -f hello-world-pod.yml
+            sleep 20
+            IP=$(kubectl get -n hello-world po -o wide | awk '/hello-world/ {print $6}')
+            echo "IP: $IP"
+            nohup kubectl -n hello-world port-forward pod/hello-world 5000:5000 > port-forward.log 2>&1 &
+            sleep 5
+            curl -k -X POST "http://localhost:5000/api/v1/hello" -H "Content-Type: application/json" -d '{"name": "Jonas"}'
+
+            if [[ $? != 0 ]]; then
+              echo "hello-world api not working"
+              exit 127
+            fi

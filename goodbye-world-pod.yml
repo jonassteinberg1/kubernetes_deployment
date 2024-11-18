@@ -2,7 +2,7 @@ apiVersion: v1
 kind: Pod
 metadata:
   annotations: 
-    goodbye-world: v1.0.5
+    goodbye-world: v1
   labels:
     app: goodbye-world
   name: goodbye-world
@@ -24,31 +24,32 @@ spec:
           topologyKey: topology.kubernetes.io/zone
   containers:
   - name: goodbye-world
-    image: 379683964026.dkr.ecr.us-east-1.amazonaws.com/goodbye-world:v1.0.5
+    image: 379683964026.dkr.ecr.us-east-1.amazonaws.com/goodbye-world:v1.0.7
     imagePullPolicy: IfNotPresent
     ports:
-    - containerPort: 5001
+    - containerPort: 5000
       name: goodbye-world
       protocol: TCP
     livenessProbe:
-      failureThreshold: 5
       httpGet:
         path: /api/v1/healthz
-        port: 5001
+        port: 5000
         scheme: HTTP
+      failureThreshold: 3
       initialDelaySeconds: 10
       periodSeconds: 10
       successThreshold: 1
       timeoutSeconds: 5
     readinessProbe:
-      failureThreshold: 3
       httpGet:
         path: /api/v1/readiness
-        port: 5001
+        port: 5000
         scheme: HTTP
+      failureThreshold: 3
+      initialDelaySeconds: 10
       periodSeconds: 10
       successThreshold: 1
-      timeoutSeconds: 1
+      timeoutSeconds: 5
     resources:
       limits:
         memory: 170Mi
