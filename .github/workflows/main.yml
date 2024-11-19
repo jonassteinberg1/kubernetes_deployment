@@ -202,7 +202,7 @@ jobs:
             echo "creating goodbye-world pod"
             kubectl apply -f goodbye-world-pod.yml
             sleep 20
-            nohup kubectl -n goodbye-world port-forward pod/hello-world 5001:5000 > port-forward.log 2>&1 &
+            nohup kubectl -n goodbye-world port-forward pod/goodbye-world 5001:5000 > port-forward.log 2>&1 &
             sleep 5
             curl -k -X POST "http://localhost:5001/api/v1/goodbye" -H "Content-Type: application/json" -d '{"name": "Jonas"}'
 
