@@ -22,7 +22,7 @@ def goodbye():
     content = request.get_json()
     app.logger.info(f"content received: {content}")
     name = content.get('name')
-    return jsonify({"goodbye": f"Hello, {name}"})
+    return jsonify({"goodbye": f"Goodbye, {name}"})
 
 @app.route("/api/v1/healthz", methods=['GET'])
 def healthz():
