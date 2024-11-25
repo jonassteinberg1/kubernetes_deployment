@@ -2,11 +2,11 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   annotations:
-    hello-world: v1
+    goodbye-world: v1
   labels:
-    app: hello-world
-  name: hello-world
-  namespace: hello-world
+    app: goodbye-world
+  name: goodbye-world
+  namespace: goodbye-world
 spec:
   replicas: 2
   selector:
@@ -14,15 +14,15 @@ spec:
       - key: app
         operator: In
         values:
-          - hello-world
+          - goodbye-world
   strategy:
     type: RollingUpdate
     rollingUpdate:
       maxSurge: 25%
       maxUnavailable: 25%
   template:
-    name: hello-world
-    namespace: hello-world
+    name: goodbye-world
+    namespace: goodbye-world
     spec:
       imagePullSecrets:
         - name: aws-ecr-secret
@@ -36,15 +36,15 @@ spec:
                     - key: app
                       operator: In
                       values:
-                        - goodbye-world
+                        - hello-world
                 topologyKey: topology.kubernetes.io/zone
       containers:
-        - name: hello-world
-          image: 379683964026.dkr.ecr.us-east-1.amazonaws.com/hello-world:v1.0.7
+        - name: goodbye-world
+          image: 379683964026.dkr.ecr.us-east-1.amazonaws.com/goodbye-world:v1.0.11
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 5000
-              name: hello-world
+              name: goodbye-world
               protocol: TCP
           livenessProbe:
             httpGet:

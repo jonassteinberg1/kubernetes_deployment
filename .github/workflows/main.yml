@@ -184,7 +184,7 @@ jobs:
             echo "creating aws ecr secret..."
             kubectl create secret docker-registry aws-ecr-secret --docker-server=379683964026.dkr.ecr.us-east-1.amazonaws.com --docker-username=AWS --docker-password=$(aws ecr get-login-password) --namespace=hello-world
             echo "creating hello-world pod"
-            kubectl apply -f hello-world-pod.yml
+            kubectl apply -f hello-world-deploy.yml
             sleep 20
             nohup kubectl -n hello-world port-forward pod/hello-world 5000:5000 > port-forward.log 2>&1 &
             sleep 5
@@ -200,7 +200,7 @@ jobs:
             echo "creating aws ecr secret..."
             kubectl create secret docker-registry aws-ecr-secret --docker-server=379683964026.dkr.ecr.us-east-1.amazonaws.com --docker-username=AWS --docker-password=$(aws ecr get-login-password) --namespace=goodbye-world
             echo "creating goodbye-world pod"
-            kubectl apply -f goodbye-world-pod.yml
+            kubectl apply -f goodbye-world-deploy.yml
             sleep 20
             nohup kubectl -n goodbye-world port-forward pod/goodbye-world 5001:5000 > port-forward.log 2>&1 &
             sleep 5
