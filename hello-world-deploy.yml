@@ -21,8 +21,6 @@ spec:
       maxSurge: 25%
       maxUnavailable: 25%
   template:
-    name: hello-world
-    namespace: hello-world
     spec:
       imagePullSecrets:
         - name: aws-ecr-secret
