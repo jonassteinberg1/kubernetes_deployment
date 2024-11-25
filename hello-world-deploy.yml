@@ -21,6 +21,9 @@ spec:
       maxSurge: 25%
       maxUnavailable: 25%
   template:
+    metadata:
+      labels:
+        app: hello-world
     spec:
       imagePullSecrets:
         - name: aws-ecr-secret

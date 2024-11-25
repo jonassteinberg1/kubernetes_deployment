@@ -21,8 +21,9 @@ spec:
       maxSurge: 25%
       maxUnavailable: 25%
   template:
-    name: goodbye-world
-    namespace: goodbye-world
+    metadata:
+      labels:
+        app: goodbye-world
     spec:
       imagePullSecrets:
         - name: aws-ecr-secret
