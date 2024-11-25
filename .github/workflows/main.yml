@@ -186,8 +186,8 @@ jobs:
             echo "creating hello-world deploy"
             kubectl apply -f hello-world-deploy.yml
             kubectl rollout status deployment/hello-world -n hello-world
-            nohup kubectl -n hello-world port-forward pod/hello-world 5000:5000 > port-forward.log 2>&1 &
-            sleep 5
+            nohup kubectl port-forward $(kubectl get pod -l app=hello-world -n hello-world -o name | head -n 1) 5000:5000 -n hello-world > port-forward.log 2>&1 &
+            sleep 2
             curl -k -X POST "http://localhost:5000/api/v1/hello" -H "Content-Type: application/json" -d '{"name": "Jonas"}'
 
             if [[ $? != 0 ]]; then
@@ -202,8 +202,8 @@ jobs:
             echo "creating goodbye-world deploy"
             kubectl apply -f goodbye-world-deploy.yml
             kubectl rollout status deployment/goodbye-world -n goodbye-world
-            nohup kubectl -n goodbye-world port-forward pod/goodbye-world 5001:5000 > port-forward.log 2>&1 &
-            sleep 5
+            nohup kubectl port-forward $(kubectl get pod -l app=goodbye-world -n goodbye-world -o name | head -n 1) 5001:5000 -n goodbye-world & > port-forward.log 2>&1 &
+            sleep 2
             curl -k -X POST "http://localhost:5001/api/v1/goodbye" -H "Content-Type: application/json" -d '{"name": "Jonas"}'
 
             if [[ $? != 0 ]]; then
