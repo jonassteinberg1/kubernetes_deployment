@@ -32,5 +32,5 @@ def healthz():
 def readiness():
     return jsonify({"readiness": "ready"})
 
-if __name__ == "__name__":
+if __name__ == "__main__":
     app.run(debug=False)

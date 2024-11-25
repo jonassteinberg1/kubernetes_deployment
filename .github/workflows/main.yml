@@ -135,8 +135,8 @@ jobs:
               echo "Minikube cluster is already running."
             fi
 
-  hello-world:
-    name: deploy hello-world api
+  world:
+    name: deploy world apis
     runs-on: ubuntu-latest
     needs: minikube
     environment: dev
@@ -152,10 +152,10 @@ jobs:
           username: ${{ secrets.SSH_USERNAME }}
           key: ${{ secrets.SSH_KEY}}
           port: ${{ secrets.PORT }}
-          source: "hello-world*.yml"
+          source: "hello-world*.yml,goodbye-world*.yml"
           target: /home/ec2-user
 
-      - name: deploy and test hello-world api
+      - name: deploy and test world apis
         uses: appleboy/ssh-action@v1.1.0
         with:
           host: ${{ secrets.SSH_HOST }}
@@ -165,23 +165,48 @@ jobs:
             echo "logging into Docker..."
             aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.us-east-1.amazonaws.com
             echo "installing calico to handle multi-node minikube..."
-            kubectl apply -f https://docs.projectcalico.org/manifests/calico.yaml
+            if helm list -n kube-system | grep -q "calico"; then
+              echo "Calico Helm release exists. Ensuring it is up-to-date..."
+              helm upgrade --install calico projectcalico/tigera-operator --namespace kube-system
+              echo "sleep to give calico some time..."
+              sleep 10
+            else
+              echo "Calico Helm release not found. Installing..."
+              helm repo add projectcalico https://docs.projectcalico.org/charts
+              helm repo update
+              helm upgrade --install calico projectcalico/tigera-operator --namespace kube-system
+              echo "sleep to give calico some time..."
+              sleep 10
+            fi
+
             echo "creating hello-world namespace..."
             kubectl apply -f hello-world-ns.yml
             echo "creating aws ecr secret..."
             kubectl create secret docker-registry aws-ecr-secret --docker-server=379683964026.dkr.ecr.us-east-1.amazonaws.com --docker-username=AWS --docker-password=$(aws ecr get-login-password) --namespace=hello-world
-            echo "sleep to give calico some time..."
-            sleep 10
-            echo "creating hello-world pod"
-            kubectl apply -f hello-world-pod.yml
-            sleep 20
-            IP=$(kubectl get -n hello-world po -o wide | awk '/hello-world/ {print $6}')
-            echo "IP: $IP"
-            nohup kubectl -n hello-world port-forward pod/hello-world 5000:5000 > port-forward.log 2>&1 &
-            sleep 5
+            echo "creating hello-world deploy"
+            kubectl apply -f hello-world-deploy.yml
+            kubectl rollout status deployment/hello-world -n hello-world
+            nohup kubectl port-forward $(kubectl get pod -l app=hello-world -n hello-world -o name | head -n 1) 5000:5000 -n hello-world > port-forward.log 2>&1 &
+            sleep 2
             curl -k -X POST "http://localhost:5000/api/v1/hello" -H "Content-Type: application/json" -d '{"name": "Jonas"}'
 
             if [[ $? != 0 ]]; then
               echo "hello-world api not working"
+              exit 127
+            fi
+
+            echo "creating goodbye-world namespace..."
+            kubectl apply -f goodbye-world-ns.yml
+            echo "creating aws ecr secret..."
+            kubectl create secret docker-registry aws-ecr-secret --docker-server=379683964026.dkr.ecr.us-east-1.amazonaws.com --docker-username=AWS --docker-password=$(aws ecr get-login-password) --namespace=goodbye-world
+            echo "creating goodbye-world deploy"
+            kubectl apply -f goodbye-world-deploy.yml
+            kubectl rollout status deployment/goodbye-world -n goodbye-world
+            nohup kubectl port-forward $(kubectl get pod -l app=goodbye-world -n goodbye-world -o name | head -n 1) 5001:5000 -n goodbye-world & > port-forward.log 2>&1 &
+            sleep 2
+            curl -k -X POST "http://localhost:5001/api/v1/goodbye" -H "Content-Type: application/json" -d '{"name": "Jonas"}'
+
+            if [[ $? != 0 ]]; then
+              echo "goodbye-world api not working"
               exit 127
             fi

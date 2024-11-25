@@ -24,7 +24,7 @@ spec:
           topologyKey: topology.kubernetes.io/zone
   containers:
   - name: goodbye-world
-    image: 379683964026.dkr.ecr.us-east-1.amazonaws.com/goodbye-world:v1.0.7
+    image: 379683964026.dkr.ecr.us-east-1.amazonaws.com/goodbye-world:v1.0.11
     imagePullPolicy: IfNotPresent
     ports:
     - containerPort: 5000
